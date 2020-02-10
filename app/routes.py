@@ -5,7 +5,7 @@ from urllib.request import urlretrieve
 @application.route('/')
 @application.route('/index')
 def index():
-    #torch.backends.quantized.engine = 'qnnpack'
+    torch.backends.quantized.engine = 'qnnpack'
     #model = load_model(None, model_urls['backbone'])
     print(torch.backends.quantized.supported_engines)
     backbone = load_model(None, model_urls['backbone_qnnpack'])
