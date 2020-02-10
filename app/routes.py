@@ -16,46 +16,46 @@ def index():
 @application.route('/predict', methods=['GET', 'POST'])
 def predict():
 
-    if request.method == 'POST':
-        if 'file' not in request.files:
-            return jsonify({'error':'No source img file'})
-        print('request_files: ', request.files)
-        file = request.files.get('file')
-        if not file:
-            return jsonify({'error':'Not correct source img file'})
+    #if request.method == 'POST':
+    if 'file' not in request.files:
+        return jsonify({'error':'No source img file'})
+    print('request_files: ', request.files)
+    file = request.files.get('file')
+    if not file:
+        return jsonify({'error':'Not correct source img file'})
 
-        image_bytes = file.read()
-        #print('file: ', img_bytes)
+    image_bytes = file.read()
+    #print('file: ', img_bytes)
 
-        #try:
-        img, orig_size = transform_image(image_bytes,
-                                         mean=[0, 0, 0],
-                                         std=[1, 1, 1])  # Dont normalize coco 2017 cause pytorch models uses normalization themself
-        img = img.squeeze()
-        # print('Memory in detection/utils/get_prediction before predicting and img_memory_size: ', memorycheck(img))
-        torch.backends.quantized.engine = 'qnnpack'
-        model = load_model(None, model_urls['model'])
+    #try:
+    img, orig_size = transform_image(image_bytes,
+                                     mean=[0, 0, 0],
+                                     std=[1, 1, 1])  # Dont normalize coco 2017 cause pytorch models uses normalization themself
+    img = img.squeeze()
+    # print('Memory in detection/utils/get_prediction before predicting and img_memory_size: ', memorycheck(img))
+    torch.backends.quantized.engine = 'qnnpack'
+    model = load_model(None, model_urls['model'])
 
-        print('Model loaded. Object detection predicting...')
-        model.eval()
+    print('Model loaded. Object detection predicting...')
+    model.eval()
 
-        print('Processed image shape: ', img.size())
-        #print('Original image size: ', orig_size)
+    print('Processed image shape: ', img.size())
+    #print('Original image size: ', orig_size)
 
-        with torch.no_grad():
-            prediction = model([img])[0]
+    with torch.no_grad():
+        prediction = model([img])[0]
 
-        #except Exception as e:
-        #    print('Can not predict! Internal error:', e)
-        #    return jsonify({'error': 'Can not predict. Please try another image.'})
+    #except Exception as e:
+    #    print('Can not predict! Internal error:', e)
+    #    return jsonify({'error': 'Can not predict. Please try another image.'})
 
-        #print(prediction)
-        pred = {'error': ''}
-        pred['prediction'] = prediction
+    #print(prediction)
+    pred = {'error': ''}
+    pred['prediction'] = prediction
 
-        print('Done!')
-        #print('prediction: ', pred['prediction'])
-        return jsonify(pred)
+    print('Done!')
+    #print('prediction: ', pred['prediction'])
+    return jsonify(pred)
 
 
 
