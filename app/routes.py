@@ -6,8 +6,9 @@ from urllib.request import urlretrieve
 @application.route('/index')
 def index():
     #torch.backends.quantized.engine = 'qnnpack'
-    model = load_model(None, model_urls['backbone'])
-    print(model.code)
+    #model = load_model(None, model_urls['backbone'])
+    print(torch.backends.quantized.supported_engines)
+    backbone = load_model(None, model_urls['backbone_qnnpack'])
     return "Hello, World!"
 
 
@@ -21,7 +22,8 @@ def index():
 
 model_urls ={
     'backbone' : '19MOic9ojbeMY0BGuZj1h20PWzr6YzoVU',
-    'model' : '13TCXHl6evZpj0VN71DGFhAdLm2tz0eTs'
+    'model' : '13TCXHl6evZpj0VN71DGFhAdLm2tz0eTs',
+    'backbone_qnnpack': '1AaqKkSxcQ2OWbW6ZkNN35GugSJWi4Yu8'
 }
 
 
