@@ -1,0 +1,28 @@
+*.py[cod]
+
+# C extensions
+*.so
+
+# babel
+*.po
+
+# Packages
+__pycache__
+
+# logs
+logs
+*.log
+
+# Vagrant
+.vagrant
+
+venv*
+venv36win32
+pretrained
+
+.env
+.idea
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
