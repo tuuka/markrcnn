@@ -107,7 +107,8 @@ def random_colors(N, bright=True):
     return [hex_colours((round(r*255),round(g*255),round(b*255))) for r,g,b in colors]
 
 
-
+print('Supported engines: ', torch.backends.quantized.supported_engines)
+torch.backends.quantized.engine = 'qnnpack'
 model = load_model(None, model_urls['model_qnnpack'])
 #model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
 model.transform.max_size = 640
@@ -125,8 +126,6 @@ print('Model warm-up time: %0.02f seconds\n' % dt)
 @application.route('/')
 @application.route('/index')
 def index():
-    #torch.backends.quantized.engine = 'qnnpack'
-    #print(torch.backends.quantized.supported_engines)
     return render_template('index.html', title='MaskRCNN')
 
 @application.route('/predict', methods=['GET', 'POST'])
@@ -146,13 +145,9 @@ def predict():
     img = torchvision.transforms.ToTensor()(img)
     #model.eval()
     print('Processed image shape: ', img.size())
-
     XYXY = list(img.size())[1:][::-1]
     XYXY = torch.tensor(XYXY + XYXY).float()
-
     labels = labels_coco_2017
-
-
     with torch.no_grad():
         prediction = model([img])
 
@@ -170,7 +165,6 @@ def predict():
         'scores': [],
         'orig_size' : list(orig_size), # width first
     }
-    #print('Memory in detection/utils/get_prediction after model predicted (and model size im MB): ', memorycheck(model))
     N = len(prediction['scores'][prediction['scores'] > 0.7])
     pred['colors'] = random_colors(N)
 
@@ -202,7 +196,6 @@ def predict():
         del img_seg, buffered, r, g, b, mask
 
     del img, prediction, N
-    #print('prediction:\n',prediction)
     #print('\npred:\n', pred)
     return jsonify({'error':'', 'prediction':pred})
 
