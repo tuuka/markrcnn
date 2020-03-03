@@ -1,6 +1,6 @@
 from app import application
 from flask import jsonify, request, render_template
-import torch, torchvision, os, sys, requests, io, random, colorsys, base64
+import torch, torchvision, os, sys, requests, io, random, colorsys, base64,time
 from urllib.request import urlretrieve
 from PIL import Image
 
@@ -108,14 +108,19 @@ def random_colors(N, bright=True):
 
 
 
-# model = load_model(None, model_urls['model_qnnpack'])
-model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
+model = load_model(None, model_urls['model_qnnpack'])
+#model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
+model.transform.max_size = 640
+model.transform.min_size = (480,)
+
 model.eval()
 # model warm-up
+t = time.time()
 with torch.no_grad():
-    for i in range(1):
+    for i in range(2):
         prediction = model([torch.randn(3, 480, 640)])
-
+dt = time.time() - t
+print('Model warm-up time: %0.02f seconds\n' % dt)
 
 @application.route('/')
 @application.route('/index')
@@ -126,6 +131,7 @@ def index():
 
 @application.route('/predict', methods=['GET', 'POST'])
 def predict():
+    t = time.time()
     global model
     if 'file' not in request.files:
         return jsonify({'error':'No source img file'})
@@ -146,8 +152,6 @@ def predict():
 
     labels = labels_coco_2017
 
-    #model.transform.max_size = 640
-    #model.transform.min_size = (480,)
 
     with torch.no_grad():
         prediction = model([img])
@@ -155,6 +159,9 @@ def predict():
     if type(prediction) is tuple:
         prediction = prediction[1]
     prediction = prediction[0]  # Only one image (first) is needed
+
+    dt = time.time() - t
+    print('Model predict time: %0.02f seconds\n' % dt)
 
     pred = {
         'boxes'  : [],
@@ -196,7 +203,7 @@ def predict():
 
     del img, prediction, N
     #print('prediction:\n',prediction)
-    print('\npred:\n', pred)
+    #print('\npred:\n', pred)
     return jsonify({'error':'', 'prediction':pred})
 
 
