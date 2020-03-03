@@ -117,7 +117,7 @@ model.transform.min_size = (480,)
 model.eval()
 # model warm-up
 t = time.time()
-with torch.no_grad():
+with torch.jit.optimized_execution(False), torch.no_grad():
     for i in range(2):
         prediction = model([torch.randn(3, 480, 640)])
 dt = time.time() - t
@@ -148,7 +148,7 @@ def predict():
     XYXY = list(img.size())[1:][::-1]
     XYXY = torch.tensor(XYXY + XYXY).float()
     labels = labels_coco_2017
-    with torch.no_grad():
+    with torch.jit.optimized_execution(False), torch.no_grad():
         prediction = model([img])
 
     if type(prediction) is tuple:
