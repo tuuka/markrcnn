@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+{% block head %}
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="data:;base64,=">
+    <title>MaskRCNN</title>
+
+    <style type="text/css">
+
+        .image-in-preview {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: inherit;
+          height: inherit
+        }
+
+    </style>
+
+{% endblock %}
+</head>
+
+{% block content %}
+<body>
+
+<!-- Preview and predict form -->
+<div class="d-flex flex-row justify-content-between preview-predict-form" style="">
+    <!-- Image preview and predicted image -->
+    <div class="" style="height: 100%; width: 100%; margin-right: 0">
+        <div class="image-in-preview"> <!-- IMAGE -->
+            <img class="rounded" src="https://www.sb.by/upload/iblock/e26/e2695b04032819905a3150f90ef27dd9.jpg" id="imgpreview" alt="" style="height: 100%; width: auto; z-index: 0;">
+        </div>
+        <div class="image-in-preview"> <!-- SEGMENTED IMAGE -->
+            <img class="rounded" src="" id="img_seg" alt="" style="height: 100%; width: auto; z-index: 1; opacity: 0.0">
+        </div>
+        <div class="image-in-preview"> <!-- CANVAS -->
+            <canvas id="detection_canvas" style="height: 100%; width: auto; z-index: 2; opacity: 0.0;"></canvas>
+        </div>
+    </div>
+</div>
+<!-- /Preview and predict form -->
+
+{% endblock %}
+
+{% block scripts %}
+
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+    <script src="{{ url_for('static', filename='JS/maskrcnn.js') }}"></script>
+
+{% endblock %}
+
+
+
+
+</body>
+</html>
