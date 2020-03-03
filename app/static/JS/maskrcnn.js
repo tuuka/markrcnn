@@ -1,12 +1,15 @@
     $(document).ready(function() {
 
-    $('#imgpreview').bind('load', function (e) {
-        let ImgBlob = e.target.src;
+    $('#imgpreview').bind('load', LoadImageHandler());
+
+    function LoadImageHandler () {
+        let ImgBlob =  document.getElementById("imgpreview").src;
+        //console.log(ImgBlob);
         FillClassPredict(0, true);
         fetch('https://cors-anywhere.herokuapp.com/'+ImgBlob, {headers:{"Content-Type":"text/plain;charset=UTF-8"}}).then(i => i.blob()).then(function (b) {
             let urlpost = '/predict';
             //console.log('URLPost: ', urlpost);
-
+            console.log(b);
             Predict(b, urlpost)
                 .then(function (pred) {
                     if (!pred['error']) {
@@ -19,7 +22,7 @@
                     console.log('There has been problem with fetch operation when predicting:' + error.message);
             });
         });
-    });
+    };
 
     /* Brightness of color detecting to make text contrast*/
     function GetContrastTextColor(background_color) {

@@ -110,9 +110,10 @@ def random_colors(N, bright=True):
 
 # model = load_model(None, model_urls['model_qnnpack'])
 model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
+model.eval()
 # model warm-up
 with torch.no_grad():
-    for i in range(3):
+    for i in range(1):
         prediction = model([torch.randn(3, 480, 640)])
 
 
@@ -137,7 +138,7 @@ def predict():
     img = Image.open(io.BytesIO(file)).convert('RGB')
     orig_size = img.size
     img = torchvision.transforms.ToTensor()(img)
-    model.eval()
+    #model.eval()
     print('Processed image shape: ', img.size())
 
     XYXY = list(img.size())[1:][::-1]
