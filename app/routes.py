@@ -3,6 +3,7 @@ from flask import jsonify, request, render_template
 import torch, torchvision, os, sys, requests, io, random, colorsys, base64,time
 from urllib.request import urlretrieve
 from PIL import Image
+from memory_profiler import profile
 
 
 labels_coco_2017 = ['background', 'person', 'bicycle', 'car', 'motorcycle', 'airplane',
@@ -107,12 +108,13 @@ def random_colors(N, bright=True):
     return [hex_colours((round(r*255),round(g*255),round(b*255))) for r,g,b in colors]
 
 
+torch.set_grad_enabled(False)
 print('Supported engines: ', torch.backends.quantized.supported_engines)
 torch.backends.quantized.engine = 'qnnpack'
 model = load_model(None, model_urls['model_qnnpack'])
 #model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
-model.transform.max_size = 640
-model.transform.min_size = (480,)
+#model.transform.max_size = 640
+#model.transform.min_size = (480,)
 
 model.eval()
 # model warm-up
@@ -128,6 +130,7 @@ print('Model warm-up time: %0.02f seconds\n' % dt)
 def index():
     return render_template('index.html', title='MaskRCNN')
 
+@profile(precision=4)
 @application.route('/predict', methods=['GET', 'POST'])
 def predict():
     t = time.time()
