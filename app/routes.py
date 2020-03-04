@@ -113,14 +113,14 @@ print('Supported engines: ', torch.backends.quantized.supported_engines)
 torch.backends.quantized.engine = 'qnnpack'
 model = load_model(None, model_urls['model_qnnpack'])
 #model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
-#model.transform.max_size = 640
-#model.transform.min_size = (480,)
+model.transform.max_size = 640
+model.transform.min_size = (480,)
 
 model.eval()
 # model warm-up
 t = time.time()
 with torch.jit.optimized_execution(False), torch.no_grad():
-    for i in range(2):
+    for i in range(1):
         prediction = model([torch.randn(3, 480, 640)])
 dt = time.time() - t
 print('Model warm-up time: %0.02f seconds\n' % dt)
