@@ -114,9 +114,9 @@ print('Supported engines: ', torch.backends.quantized.supported_engines)
 #torch._C._jit_set_profiling_executor(False)
 #torch._C._jit_set_profiling_mode(False)
 #torch.jit.optimized_execution(False)
-#torch.backends.quantized.engine = 'qnnpack'
-#model = load_model(None, model_urls['model_qnnpack'])
-model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
+torch.backends.quantized.engine = 'qnnpack'
+model = load_model(None, model_urls['model_qnnpack'])
+#model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
 model.transform.max_size = 640
 model.transform.min_size = (480,)
 
