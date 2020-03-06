@@ -1,12 +1,11 @@
-from app import application
+from app import application, cache
 from flask import jsonify, request, render_template
 import torch, torchvision, os, sys, requests, io, random, colorsys, base64,time
 from urllib.request import urlretrieve
 from PIL import Image
-from memory_profiler import profile
 
 
-labels_coco_2017 = ['background', 'person', 'bicycle', 'car', 'motorcycle', 'airplane',
+labels = ['background', 'person', 'bicycle', 'car', 'motorcycle', 'airplane',
     'bus', 'train', 'truck', 'boat', 'traffic light', 'fire hydrant', 'street sign',
     'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep',
     'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'hat', 'backpack', 'umbrella',
@@ -110,6 +109,9 @@ def random_colors(N, bright=True):
 
 torch.set_grad_enabled(False)
 print('Supported engines: ', torch.backends.quantized.supported_engines)
+torch._C._jit_set_profiling_executor(False)
+torch._C._jit_set_profiling_mode(False)
+torch.jit.optimized_execution(False)
 torch.backends.quantized.engine = 'qnnpack'
 model = load_model(None, model_urls['model_qnnpack'])
 #model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
@@ -118,23 +120,22 @@ model.transform.min_size = (480,)
 
 model.eval()
 # model warm-up
-t = time.time()
-with torch.jit.optimized_execution(False), torch.no_grad():
-    for i in range(1):
-        prediction = model([torch.randn(3, 480, 640)])
-dt = time.time() - t
-print('Model warm-up time: %0.02f seconds\n' % dt)
+#t = time.time()
+#with torch.jit.optimized_execution(False), torch.no_grad():
+#    for i in range(1):
+#        prediction = model([torch.randn(3, 480, 640)])
+#dt = time.time() - t
+#print('Model warm-up time: %0.02f seconds\n' % dt)
 
 @application.route('/')
 @application.route('/index')
 def index():
     return render_template('index.html', title='MaskRCNN')
 
-@profile(precision=4)
+
 @application.route('/predict', methods=['GET', 'POST'])
+@cache.cached(timeout=30)
 def predict():
-    t = time.time()
-    global model
     if 'file' not in request.files:
         return jsonify({'error':'No source img file'})
     #print('request_files: ', request.files)
@@ -143,14 +144,22 @@ def predict():
         return jsonify({'error':'Not correct source img file'})
 
     file = file.read()
+    pred = prediction(file)
+    return jsonify({'error':'', 'prediction':pred})
+
+
+@cache.cached(timeout=30, key_prefix='prediction')
+def prediction(file):
+    global model
+    t = time.time()
     img = Image.open(io.BytesIO(file)).convert('RGB')
     orig_size = img.size
     img = torchvision.transforms.ToTensor()(img)
+    #print(img)
     #model.eval()
     print('Processed image shape: ', img.size())
     XYXY = list(img.size())[1:][::-1]
     XYXY = torch.tensor(XYXY + XYXY).float()
-    labels = labels_coco_2017
     with torch.jit.optimized_execution(False), torch.no_grad():
         prediction = model([img])
 
@@ -194,38 +203,9 @@ def predict():
         img_seg = Image.fromarray(img_seg.permute(1, 2, 0).byte().cpu().numpy()).resize(orig_size)
         buffered = io.BytesIO()
         img_seg.save(buffered, format="JPEG")
-        img_seg = 'data:image/jpeg;base64,' + base64.b64encode(buffered.getvalue()).decode("utf-8")
-        pred['masks'] = img_seg
-        del img_seg, buffered, r, g, b, mask
+        pred['masks'] = 'data:image/jpeg;base64,' + base64.b64encode(buffered.getvalue()).decode("utf-8")
+        del buffered, r, g, b, mask
 
     del img, prediction, N
     #print('\npred:\n', pred)
-    return jsonify({'error':'', 'prediction':pred})
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    #print(prediction)
-    pred = {'error': ''}
-    pred['prediction'] = prediction
-
-    print('Done!')
-    #print('prediction: ', pred['prediction'])
-    return jsonify(pred)
-
-
-
-
-
-
+    return pred
