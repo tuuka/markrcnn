@@ -3,6 +3,7 @@ from flask import jsonify, request, render_template
 import torch, torchvision, os, sys, requests, io, random, colorsys, base64,time
 from urllib.request import urlretrieve
 from PIL import Image
+import psutil
 
 
 labels = ['background', 'person', 'bicycle', 'car', 'motorcycle', 'airplane',
@@ -109,12 +110,12 @@ def random_colors(N, bright=True):
 
 torch.set_grad_enabled(False)
 print('Supported engines: ', torch.backends.quantized.supported_engines)
-torch._C._jit_set_profiling_executor(False)
-torch._C._jit_set_profiling_mode(False)
-torch.jit.optimized_execution(False)
-torch.backends.quantized.engine = 'qnnpack'
-model = load_model(None, model_urls['model_qnnpack'])
-#model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
+#torch._C._jit_set_profiling_executor(False)
+#torch._C._jit_set_profiling_mode(False)
+#torch.jit.optimized_execution(False)
+#torch.backends.quantized.engine = 'qnnpack'
+#model = load_model(None, model_urls['model_qnnpack'])
+model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
 model.transform.max_size = 640
 model.transform.min_size = (480,)
 
@@ -134,7 +135,7 @@ def index():
 
 
 @application.route('/predict', methods=['GET', 'POST'])
-@cache.cached(timeout=30)
+@cache.cached(timeout=0)
 def predict():
     if 'file' not in request.files:
         return jsonify({'error':'No source img file'})
@@ -145,10 +146,14 @@ def predict():
 
     file = file.read()
     pred = prediction(file)
-    return jsonify({'error':'', 'prediction':pred})
+    return jsonify({'error':'',
+                    'prediction':pred,
+                    'memory':str(psutil.Process(os.getpid()).memory_info().rss / 1024) + 'kiB',
+                    'p_id':os.getpid()
+                    })
 
 
-@cache.cached(timeout=30, key_prefix='prediction')
+@cache.cached(timeout=0, key_prefix='prediction')
 def prediction(file):
     global model
     t = time.time()
@@ -168,7 +173,7 @@ def prediction(file):
     prediction = prediction[0]  # Only one image (first) is needed
 
     dt = time.time() - t
-    print('Model predict time: %0.02f seconds\n' % dt)
+    print('Model predict time: %0.02f seconds.' % dt)
 
     pred = {
         'boxes'  : [],
@@ -204,8 +209,8 @@ def prediction(file):
         buffered = io.BytesIO()
         img_seg.save(buffered, format="JPEG")
         pred['masks'] = 'data:image/jpeg;base64,' + base64.b64encode(buffered.getvalue()).decode("utf-8")
-        del buffered, r, g, b, mask
+        #del buffered, r, g, b, mask
 
-    del img, prediction, N
+    #del img, prediction, N
     #print('\npred:\n', pred)
     return pred
