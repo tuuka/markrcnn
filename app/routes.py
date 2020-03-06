@@ -135,7 +135,7 @@ def index():
 
 
 @application.route('/predict', methods=['GET', 'POST'])
-@cache.cached(timeout=0)
+@application.cache.cached(timeout=0)
 def predict():
     if 'file' not in request.files:
         return jsonify({'error':'No source img file'})
@@ -153,7 +153,7 @@ def predict():
                     })
 
 
-@cache.cached(timeout=0, key_prefix='prediction')
+@application.cache.cached(timeout=0, key_prefix='prediction')
 def prediction(file):
     global model
     t = time.time()
