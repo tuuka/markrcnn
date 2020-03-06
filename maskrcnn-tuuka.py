@@ -1,16 +1,7 @@
-from app import application, cache
+from app import application
 import os
 
-def main():
-    cache.init_app(application, config={
-        "CACHE_TYPE": "filesystem",
-        "CACHE_DIR" : "/tmp/cached"
-    })
-
-    with application.app_context():
-        cache.clear()
+if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     application.run(host='0.0.0.0', port=port, debug=False)
-
-if __name__ == '__main__':
-    main()
+    #application.run(host='0.0.0.0')

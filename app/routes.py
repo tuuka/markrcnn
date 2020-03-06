@@ -1,4 +1,5 @@
 from app import application, cache
+
 from flask import jsonify, request, render_template
 import torch, torchvision, os, sys, requests, io, random, colorsys, base64,time
 from urllib.request import urlretrieve
@@ -135,7 +136,7 @@ def index():
 
 
 @application.route('/predict', methods=['GET', 'POST'])
-@application.cache.cached(timeout=0)
+@cache.cached(timeout=0)
 def predict():
     if 'file' not in request.files:
         return jsonify({'error':'No source img file'})
@@ -153,7 +154,7 @@ def predict():
                     })
 
 
-@application.cache.cached(timeout=0, key_prefix='prediction')
+@cache.cached(timeout=0, key_prefix='prediction')
 def prediction(file):
     global model
     t = time.time()
