@@ -157,7 +157,7 @@ def predict():
                     })
 
 
-@cache.memoize(timeout=300, key_prefix='prediction')
+@cache.memoize(timeout=300)
 def prediction(file):
     global model
     t = time.time()
