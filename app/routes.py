@@ -139,7 +139,6 @@ def index():
 def predict():
     if 'file' not in request.files:
         return jsonify({'error':'No source img file'})
-    #print('request_files: ', request.files)
     t = time.time()
     file = request.files.get('file')
     if not file:
@@ -157,7 +156,7 @@ def predict():
                     })
 
 
-@cache.memoize(timeout=300)
+#@cache.memoize(timeout=300)
 def prediction(file):
     global model
     t = time.time()
@@ -202,8 +201,10 @@ def prediction(file):
         r = torch.zeros_like(prediction['masks'][0]).byte()
         g = torch.zeros_like(prediction['masks'][0]).byte()
         b = torch.zeros_like(prediction['masks'][0]).byte()
-        # backwise order to order masks according scores
-        for i in range(len(pred['boxes']))[::-1]:
+
+        idx = torch.tensor([(b[2] - b[0]) * (b[3] - b[1]) for b in pred['boxes']]).argsort(descending=True)
+
+        for i in idx:
             mask = (prediction['masks'][i] > 0.5)
             # converting hex to rgb ..
             r[mask], g[mask], b[mask] = tuple(int(pred['colors'][i][j:j+2], 16) for j in (1, 3, 5))
