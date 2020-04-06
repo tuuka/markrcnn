@@ -10,7 +10,7 @@ cache = Cache(config={
     "CACHE_DIR": "/tmp/cached"
 })'''
 application = Flask(__name__)
-#cache.init_app(application)
+
 cache.init_app(application)
 CORS(application)
 

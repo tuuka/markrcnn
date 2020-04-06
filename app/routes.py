@@ -117,8 +117,8 @@ print('Supported engines: ', torch.backends.quantized.supported_engines)
 torch.backends.quantized.engine = 'qnnpack'
 model = load_model(None, model_urls['model_qnnpack'])
 #model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
-model.transform.max_size = 640
-model.transform.min_size = (480,)
+model.transform.max_size = 800
+model.transform.min_size = (640,)
 
 model.eval()
 # model warm-up
@@ -136,25 +136,28 @@ def index():
 
 
 @application.route('/predict', methods=['GET', 'POST'])
-#@cache.cached(timeout=0)
 def predict():
     if 'file' not in request.files:
         return jsonify({'error':'No source img file'})
     #print('request_files: ', request.files)
+    t = time.time()
     file = request.files.get('file')
     if not file:
         return jsonify({'error':'Not correct source img file'})
 
     file = file.read()
     pred = prediction(file)
+    dt = time.time() - t
+
     return jsonify({'error':'',
                     'prediction':pred,
+                    'time': dt,
                     'memory':str(psutil.Process(os.getpid()).memory_info().rss / 1024) + 'kiB',
                     'p_id':os.getpid()
                     })
 
 
-#@cache.cached(timeout=0, key_prefix='prediction')
+@cache.memoize(timeout=300, key_prefix='prediction')
 def prediction(file):
     global model
     t = time.time()
