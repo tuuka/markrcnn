@@ -151,7 +151,7 @@ def predict():
 
     return jsonify({'error':'',
                     'prediction':pred,
-                    'time': dt,
+                    'time': '%0.02f sec.' % dt,
                     'memory':str(psutil.Process(os.getpid()).memory_info().rss / 1024) + 'kiB',
                     'p_id':os.getpid()
                     })
