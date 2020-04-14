@@ -1,7 +1,8 @@
-from app import application, cache
+from app import application
 
 from flask import jsonify, request, render_template
-import torch, torchvision, os, sys, requests, io, random, colorsys, base64,time
+import torch, os, sys, requests, io, random, colorsys, base64,time
+from torchvision import transforms
 from urllib.request import urlretrieve
 from PIL import Image
 import psutil
@@ -24,9 +25,8 @@ labels = ['background', 'person', 'bicycle', 'car', 'motorcycle', 'airplane',
 
 
 model_urls ={
-    'backbone' : '19MOic9ojbeMY0BGuZj1h20PWzr6YzoVU',
     'model' : 'https://download.pytorch.org/models/maskrcnn_resnet50_fpn_coco-bf2d0c1e.pth',
-    'model_qnnpack': '1d66sECrS20bHtntA71cBEUyL9d_uqSXj'
+    'model_qnnpack': '1-0Aq-T4LX2oZiFoCQjJgWfUWjO-cVRz9'
 }
 
 def load_model(model, url, model_dir='/tmp/pretrained', map_location=torch.device('cpu')):
@@ -147,6 +147,7 @@ def predict():
     file = file.read()
     pred = prediction(file)
     dt = time.time() - t
+    print('Model predict time: %0.02f seconds.' % dt)
 
     return jsonify({'error':'',
                     'prediction':pred,
@@ -156,13 +157,12 @@ def predict():
                     })
 
 
-#@cache.memoize(timeout=300)
 def prediction(file):
     global model
     t = time.time()
     img = Image.open(io.BytesIO(file)).convert('RGB')
     orig_size = img.size
-    img = torchvision.transforms.ToTensor()(img)
+    img = transforms.ToTensor()(img)
     #print(img)
     #model.eval()
     print('Processed image shape: ', img.size())
@@ -171,18 +171,19 @@ def prediction(file):
     with torch.jit.optimized_execution(False), torch.no_grad():
         prediction = model([img])
 
+    # scripted model returns a tuple
     if type(prediction) is tuple:
         prediction = prediction[1]
     prediction = prediction[0]  # Only one image (first) is needed
 
     dt = time.time() - t
-    print('Model predict time: %0.02f seconds.' % dt)
 
     pred = {
         'boxes'  : [],
         'labels' : [],
         'colors' : [],
         'scores': [],
+        'timings': {"all_time": dt},
         'orig_size' : list(orig_size), # width first
     }
     N = len(prediction['scores'][prediction['scores'] > 0.7])
@@ -202,6 +203,7 @@ def prediction(file):
         g = torch.zeros_like(prediction['masks'][0]).byte()
         b = torch.zeros_like(prediction['masks'][0]).byte()
 
+        # sort in order of box areas
         idx = torch.tensor([(b[2] - b[0]) * (b[3] - b[1]) for b in pred['boxes']]).argsort(descending=True)
 
         for i in idx:
@@ -217,5 +219,5 @@ def prediction(file):
         #del buffered, r, g, b, mask
 
     #del img, prediction, N
-    #print('\npred:\n', pred)
+    print('\npred:\n', pred)
     return pred
