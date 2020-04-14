@@ -183,7 +183,7 @@ def prediction(file):
         'labels' : [],
         'colors' : [],
         'scores': [],
-        'timings': {"all_time": dt},
+        'time': {"all_time": dt},
         'orig_size' : list(orig_size), # width first
     }
     N = len(prediction['scores'][prediction['scores'] > 0.7])
@@ -219,5 +219,5 @@ def prediction(file):
         #del buffered, r, g, b, mask
 
     #del img, prediction, N
-    print('\npred:\n', pred)
+    #print('\npred:\n', pred)
     return pred

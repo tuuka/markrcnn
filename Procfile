@@ -1,1 +1,1 @@
-web: gunicorn maskrcnn-tuuka:application -w 4
+web: gunicorn maskrcnn-tuuka:application -w 1
