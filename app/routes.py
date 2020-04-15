@@ -151,8 +151,8 @@ def predict():
     pred = prediction(file)
 
     data = json.dumps({'boxes': pred['boxes'],
-                       'labels': pred['labels'].tolist(),
-                       'scores': pred['scores'].tolist(),
+                       'labels': pred['labels'],
+                       'scores': pred['scores'],
                        'masks': pred['masks'],
                        'colors': pred['colors'],
                        'img_size': None,
