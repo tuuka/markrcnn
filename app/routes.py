@@ -5,7 +5,7 @@ import torch, os, sys, requests, io, random, colorsys, base64,time
 from torchvision import transforms
 from urllib.request import urlretrieve
 from PIL import Image
-import psutil
+import psutil, json
 
 
 labels = ['background', 'person', 'bicycle', 'car', 'motorcycle', 'airplane',
@@ -146,12 +146,22 @@ def predict():
 
     file = file.read()
     pred = prediction(file)
+
+    data = json.dumps({'boxes': pred['boxes'],
+                       'labels': pred['labels'].tolist(),
+                       'scores': pred['scores'].tolist(),
+                       'masks': pred['masks'],
+                       'colors': pred['colors'],
+                       'img_size': None,
+                       'image_orig_size': pred['orig_size']
+                       })
+
     dt = time.time() - t
     print('Model predict time: %0.02f seconds.' % dt)
 
     return jsonify({'error':'',
                     'prediction':pred,
-                    'time': '%0.02f sec.' % dt,
+                    'time': round(dt),
                     'memory':str(psutil.Process(os.getpid()).memory_info().rss / 1024) + 'kiB',
                     'p_id':os.getpid()
                     })
@@ -183,7 +193,7 @@ def prediction(file):
         'labels' : [],
         'colors' : [],
         'scores': [],
-        'time': {"all_time": dt},
+        'time': {"all_time": round(dt)},
         'orig_size' : list(orig_size), # width first
     }
     N = len(prediction['scores'][prediction['scores'] > 0.7])
