@@ -3,6 +3,7 @@ from app import application
 from flask import jsonify, request, render_template
 import torch, os, sys, requests, io, random, colorsys, base64,time
 from torchvision import transforms
+from torchvision.models.detection import maskrcnn_resnet50_fpn
 from urllib.request import urlretrieve
 from PIL import Image
 import psutil, json
@@ -110,24 +111,26 @@ def random_colors(N, bright=True):
 
 
 torch.set_grad_enabled(False)
-print('Supported engines: ', torch.backends.quantized.supported_engines)
+#print('Supported engines: ', torch.backends.quantized.supported_engines)
 #torch._C._jit_set_profiling_executor(False)
 #torch._C._jit_set_profiling_mode(False)
 #torch.jit.optimized_execution(False)
 torch.backends.quantized.engine = 'qnnpack'
 model = load_model(None, model_urls['model_qnnpack'])
-#model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
+#model = maskrcnn_resnet50_fpn(pretrained=True)
 model.transform.max_size = 800
 model.transform.min_size = (640,)
 
 model.eval()
 # model warm-up
+'''
 t = time.time()
 with torch.jit.optimized_execution(True), torch.no_grad():
-    for i in range(2):
-        model([torch.randn(3, 640, 800)])
+    for i in range(1):
+        model([torch.randn(3, 320, 480)])
 dt = time.time() - t
 print('Model warm-up time: %0.02f seconds\n' % dt)
+'''
 
 @application.route('/')
 @application.route('/index')
