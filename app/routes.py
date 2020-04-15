@@ -122,12 +122,12 @@ model.transform.min_size = (640,)
 
 model.eval()
 # model warm-up
-#t = time.time()
-#with torch.jit.optimized_execution(False), torch.no_grad():
-#    for i in range(1):
-#        prediction = model([torch.randn(3, 480, 640)])
-#dt = time.time() - t
-#print('Model warm-up time: %0.02f seconds\n' % dt)
+t = time.time()
+with torch.jit.optimized_execution(True), torch.no_grad():
+    for i in range(2):
+        model([torch.randn(3, 640, 800)])
+dt = time.time() - t
+print('Model warm-up time: %0.02f seconds\n' % dt)
 
 @application.route('/')
 @application.route('/index')
@@ -160,7 +160,7 @@ def predict():
     print('Model predict time: %0.02f seconds.' % dt)
 
     return jsonify({'error':'',
-                    'prediction':pred,
+                    'data':data,
                     'time': round(dt),
                     'memory':str(psutil.Process(os.getpid()).memory_info().rss / 1024) + 'kiB',
                     'p_id':os.getpid()
