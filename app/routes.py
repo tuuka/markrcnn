@@ -161,10 +161,17 @@ def predict():
 
     dt = time.time() - t
     print('Model predict time: %0.02f seconds.' % dt)
+    timings = {
+        "all_time": round(dt),
+        "transform_input_time": None,
+        "model_load_time": None,
+        "session_creation_time": None,
+        "model_prediction_time": None,
+    }
 
     return jsonify({'error':'',
                     'data':data,
-                    'time': {'all_time': round(dt)},
+                    'time': timings,
                     'memory':str(psutil.Process(os.getpid()).memory_info().rss / 1024) + 'kiB',
                     'p_id':os.getpid()
                     })
@@ -206,7 +213,8 @@ def prediction(file):
     # tensor is not JSON serializable
     for i in range(N):
         pred['boxes'].append((prediction['boxes'][i].cpu() / XYXY).tolist())
-        pred['labels'].append(labels[prediction['labels'][i]])
+        #pred['labels'].append(labels[prediction['labels'][i]])
+        pred['labels'].append(prediction['labels'][i])
         pred['scores'].append(prediction['scores'][i].item())
 
     # making color mask for instance segmentation by putting objects with high scores above objects with less scores
