@@ -1,6 +1,6 @@
 from app import application
 
-from flask import jsonify, request, render_template
+from flask import jsonify, request, render_template, current_app
 import torch, os, sys, requests, io, random, colorsys, base64,time
 from torchvision import transforms
 from torchvision.models.detection import maskrcnn_resnet50_fpn
@@ -58,30 +58,33 @@ def load_model(model, url, model_dir='/tmp/pretrained', map_location=torch.devic
     # Checking environment variable for Google bucket access
     # some .pth files are in my google drive, check is url a google drive token or URL
     google_drive = False if '/' in url else True  # url checking
+    sys.stderr.write(f'os.path.exists(model_dir): {os.path.exists(model_dir)}\n')
     if not os.path.exists(model_dir): os.makedirs(model_dir)
     filename = url.split('/')[-1]
     if google_drive: filename = url + '.pth'
     cached_file = os.path.join(model_dir, filename)
     # Checking isn't there a model weight file in local filesystem and load it
     if os.path.exists(cached_file):
-        print('File exists!')
+        sys.stderr.write('File exists!')
         if model is not None:
             checkpoint = torch.load(cached_file, map_location=map_location)
-            print('Model weights was loaded from cached_file: ', cached_file)
+            sys.stderr.write(f'Model weights was loaded from cached_file: {cached_file}\n')
         else:    # scripted model loading...
-            print('Scripted model loaded from local file! ')
+            sys.stderr.write('Scripted model loaded from local file! ')
             return torch.jit.load(cached_file, map_location=map_location)
     else:
         if not google_drive:
             sys.stderr.write('Downloading: "{}" to {}\n'.format(url, cached_file))
-            urlretrieve(url, cached_file)
+            r = requests.get(url)
+            with open(cached_file, 'wb') as f:
+                f.write(r.content)
         else:
             sys.stderr.write('Downloading: "{}" to {}\n'.format('model weights from google drive', cached_file))
             download_file_from_google_drive(url, cached_file)
         if model is not None:
             checkpoint = torch.load(cached_file, map_location=map_location)
         else:  # scripted model loading...
-            print('Scripted model loading...')
+            sys.stderr.write('Scripted model loading...\n')
             return torch.jit.load(cached_file, map_location=map_location)
 
     if 'model' in checkpoint.keys(): checkpoint = checkpoint['model']
@@ -111,13 +114,14 @@ def random_colors(N, bright=True):
 
 
 torch.set_grad_enabled(False)
-#print('Supported engines: ', torch.backends.quantized.supported_engines)
+print('Supported engines: ', torch.backends.quantized.supported_engines)
 #torch._C._jit_set_profiling_executor(False)
 #torch._C._jit_set_profiling_mode(False)
 #torch.jit.optimized_execution(False)
 torch.backends.quantized.engine = 'qnnpack'
 model = load_model(None, model_urls['model_qnnpack'])
-#model = maskrcnn_resnet50_fpn(pretrained=True)
+#model = maskrcnn_resnet50_fpn(pretrained=False, pretrained_backbone=False)
+#model = load_model(model, model_urls['model'])
 model.transform.max_size = 800
 model.transform.min_size = (640,)
 

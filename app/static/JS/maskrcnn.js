@@ -9,12 +9,12 @@ $(document).ready(function() {
         fetch('https://cors-anywhere.herokuapp.com/'+ImgBlob, {headers:{"Content-Type":"text/plain;charset=UTF-8"}}).then(i => i.blob()).then(function (b) {
             let urlpost = '/predict';
             //console.log('URLPost: ', urlpost);
-            console.log(b);
+            //console.log(b);
             Predict(b, urlpost)
                 .then(function (pred) {
                     if (!pred['error']) {
-                        //console.log(pred['prediction']);
-                        FillClassPredict(pred);
+                        let prediction = JSON.parse(pred.data);
+                        FillClassPredict(prediction);
                     } else {
                         alert(pred['error']);
                     }
@@ -58,8 +58,7 @@ $(document).ready(function() {
         return await response.json();
     }
 
-    function FillClassPredict(pred, empty = false) {
-        let prediction = pred['prediction'];
+    function FillClassPredict(prediction, empty = false) {
         let c = document.getElementById("detection_canvas");
         c.style.opacity = "1.0";
         let ctx = c.getContext("2d");
