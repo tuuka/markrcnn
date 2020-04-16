@@ -214,7 +214,7 @@ def prediction(file):
     for i in range(N):
         pred['boxes'].append((prediction['boxes'][i].cpu() / XYXY).tolist())
         #pred['labels'].append(labels[prediction['labels'][i]])
-        pred['labels'].append(prediction['labels'][i])
+        pred['labels'].append(prediction['labels'][i].item())
         pred['scores'].append(prediction['scores'][i].item())
 
     # making color mask for instance segmentation by putting objects with high scores above objects with less scores
