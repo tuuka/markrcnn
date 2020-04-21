@@ -1,13 +1,13 @@
 from app import application
-
-from flask import jsonify, request, render_template, current_app
-import torch, os, sys, requests, io, random, colorsys, base64,time
+from flask import jsonify, request, render_template
+import os, sys, requests, io, random, colorsys, base64, time
+import torch, base64, time, gc
 from torchvision import transforms
-from torchvision.models.detection import maskrcnn_resnet50_fpn
-from urllib.request import urlretrieve
 from PIL import Image
+from torchvision.models.detection import maskrcnn_resnet50_fpn
 import psutil, json
-
+#from app import torch_model
+import resource
 
 labels = ['background', 'person', 'bicycle', 'car', 'motorcycle', 'airplane',
     'bus', 'train', 'truck', 'boat', 'traffic light', 'fire hydrant', 'street sign',
@@ -27,10 +27,25 @@ labels = ['background', 'person', 'bicycle', 'car', 'motorcycle', 'airplane',
 
 model_urls ={
     'model' : 'https://download.pytorch.org/models/maskrcnn_resnet50_fpn_coco-bf2d0c1e.pth',
-    'model_qnnpack': '1-0Aq-T4LX2oZiFoCQjJgWfUWjO-cVRz9'
+    'model_qnnpack': '1-0Aq-T4LX2oZiFoCQjJgWfUWjO-cVRz9',
+    'model_fbgemm': '1bj5-hLI3YPj2xPb5W_Vh1pJbhGHPnWvR',
+    'model_fbgemm_bool': '14KxKOXOGJcoupFnwT3DME8UoYBU9iU6H'
 }
 
-def load_model(model, url, model_dir='/tmp/pretrained', map_location=torch.device('cpu')):
+def debug_memory():
+    import collections, gc, resource
+    print('maxrss = {}'.format(
+        resource.getrusage(resource.RUSAGE_SELF).ru_maxrss))
+    tensors = collections.Counter((str(o.device), o.dtype, tuple(o.shape))
+                                  for o in gc.get_objects()
+                                  if torch.is_tensor(o))
+    for line in tensors.items():
+        print('{}\t{}'.format(*line))
+
+def mem():
+    return str(psutil.Process(os.getpid()).memory_info().rss / 1024) + 'kiB'
+
+def load_model(url, model_dir='/tmp/pretrained'):
 
     def download_file_from_google_drive(id, destination):
         def get_confirm_token(resp):
@@ -55,23 +70,15 @@ def load_model(model, url, model_dir='/tmp/pretrained', map_location=torch.devic
             response = session.get(URL, params=params, stream=True)
         save_response_content(response, destination)
 
-    # Checking environment variable for Google bucket access
-    # some .pth files are in my google drive, check is url a google drive token or URL
     google_drive = False if '/' in url else True  # url checking
-    sys.stderr.write(f'os.path.exists(model_dir): {os.path.exists(model_dir)}\n')
+    #sys.stderr.write(f'os.path.exists(model_dir): {os.path.exists(model_dir)}\n')
     if not os.path.exists(model_dir): os.makedirs(model_dir)
     filename = url.split('/')[-1]
     if google_drive: filename = url + '.pth'
     cached_file = os.path.join(model_dir, filename)
     # Checking isn't there a model weight file in local filesystem and load it
     if os.path.exists(cached_file):
-        sys.stderr.write('File exists!')
-        if model is not None:
-            checkpoint = torch.load(cached_file, map_location=map_location)
-            sys.stderr.write(f'Model weights was loaded from cached_file: {cached_file}\n')
-        else:    # scripted model loading...
-            sys.stderr.write('Scripted model loaded from local file! ')
-            return torch.jit.load(cached_file, map_location=map_location)
+        sys.stderr.write('File exists!\n')
     else:
         if not google_drive:
             sys.stderr.write('Downloading: "{}" to {}\n'.format(url, cached_file))
@@ -81,17 +88,7 @@ def load_model(model, url, model_dir='/tmp/pretrained', map_location=torch.devic
         else:
             sys.stderr.write('Downloading: "{}" to {}\n'.format('model weights from google drive', cached_file))
             download_file_from_google_drive(url, cached_file)
-        if model is not None:
-            checkpoint = torch.load(cached_file, map_location=map_location)
-        else:  # scripted model loading...
-            sys.stderr.write('Scripted model loading...\n')
-            return torch.jit.load(cached_file, map_location=map_location)
-
-    if 'model' in checkpoint.keys(): checkpoint = checkpoint['model']
-    model.load_state_dict(checkpoint)
-
-    del checkpoint
-    return model
+    return cached_file
 
 
 def hex_colours(col):
@@ -113,19 +110,34 @@ def random_colors(N, bright=True):
     return [hex_colours((round(r*255),round(g*255),round(b*255))) for r,g,b in colors]
 
 
+print(f'Memory after server started: {mem()}')
+model_name = 'model_fbgemm_bool'
+cached_file = load_model(model_urls[model_name])
+print(f'Memory after weights loaded: {mem()}')
 torch.set_grad_enabled(False)
-print('Supported engines: ', torch.backends.quantized.supported_engines)
-#torch._C._jit_set_profiling_executor(False)
-#torch._C._jit_set_profiling_mode(False)
-#torch.jit.optimized_execution(False)
-torch.backends.quantized.engine = 'qnnpack'
-model = load_model(None, model_urls['model_qnnpack'])
-#model = maskrcnn_resnet50_fpn(pretrained=False, pretrained_backbone=False)
-#model = load_model(model, model_urls['model'])
+#print('Supported engines: ', torch.backends.quantized.supported_engines)
+torch._C._jit_set_profiling_executor(False)
+torch._C._jit_set_profiling_mode(False)
+torch.jit.optimized_execution(False)
+#torch.backends.quantized.engine = 'qnnpack'
+
+
+if model_name == 'model':
+    from torchvision.models.detection import maskrcnn_resnet50_fpn
+    checkpoint = torch.load(cached_file)
+    if 'model' in checkpoint.keys(): checkpoint = checkpoint['model']
+    model = maskrcnn_resnet50_fpn(pretrained=False, pretrained_backbone=False)
+    sys.stderr.write('Torchvision model loading...\n')
+    model.load_state_dict(checkpoint)
+else:  # scripted model loading...
+    sys.stderr.write('Scripted model loading...\n')
+    model =  torch.jit.load(cached_file)
+print(f'Memory after model loaded: {mem()}')
 model.transform.max_size = 800
 model.transform.min_size = (640,)
-
 model.eval()
+
+
 # model warm-up
 '''
 t = time.time()
@@ -135,6 +147,12 @@ with torch.jit.optimized_execution(True), torch.no_grad():
 dt = time.time() - t
 print('Model warm-up time: %0.02f seconds\n' % dt)
 '''
+
+@application.teardown_request
+def show_teardown(exception):
+    print('TEARDOWN!!!')
+    debug_memory()
+
 
 @application.route('/')
 @application.route('/index')
@@ -152,6 +170,7 @@ def predict():
         return jsonify({'error':'Not correct source img file'})
 
     file = file.read()
+
     pred = prediction(file)
 
     data = json.dumps({'boxes': pred['boxes'],
@@ -164,36 +183,38 @@ def predict():
                        })
 
     dt = time.time() - t
-    print('Model predict time: %0.02f seconds.' % dt)
+    print(f'Predict time: {round(dt, 2)}')
     timings = {
-        "all_time": round(dt),
+        "all_time": round(dt, 2),
         "transform_input_time": None,
         "model_load_time": None,
         "session_creation_time": None,
         "model_prediction_time": None,
     }
-
+    print(f'Memory before return request: {mem()}')
     return jsonify({'error':'',
                     'data':data,
                     'time': timings,
-                    'memory':str(psutil.Process(os.getpid()).memory_info().rss / 1024) + 'kiB',
+                    'memory': mem(),
                     'p_id':os.getpid()
                     })
 
 
-def prediction(file):
+def prediction(file, model_name='model_fbgemm'):
     global model
     t = time.time()
+    print(f'Memory before image loading&transforming: {mem()}')
     img = Image.open(io.BytesIO(file)).convert('RGB')
     orig_size = img.size
     img = transforms.ToTensor()(img)
-    #print(img)
-    #model.eval()
-    print('Processed image shape: ', img.size())
+
+    #print('Processed image shape: ', img.size())
     XYXY = list(img.size())[1:][::-1]
     XYXY = torch.tensor(XYXY + XYXY).float()
+    print(f'Memory before predicting: {mem()}')
     with torch.jit.optimized_execution(False), torch.no_grad():
         prediction = model([img])
+    print(f'Memory after predicting: {mem()}')
 
     # scripted model returns a tuple
     if type(prediction) is tuple:
@@ -244,5 +265,8 @@ def prediction(file):
         #del buffered, r, g, b, mask
 
     #del img, prediction, N
+    prediction = None
+    del prediction
+    debug_memory()
     #print('\npred:\n', pred)
     return pred

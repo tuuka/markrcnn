@@ -10,7 +10,7 @@
     />
     <meta name="description" content="" />
     <meta name="author" content="" />
-    <link rel="icon" href="data:;base64,=" />
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" />
     <title>MaskRCNN</title>
 
     <style type="text/css">
@@ -29,12 +29,47 @@
   {% block content %}
   <body>
     <!-- Preview and predict form -->
-    <div
-      class="d-flex flex-row justify-content-between preview-predict-form"
-      style=""
-    >
+    <div class="preview-predict-form" style="">
+      <!-- Input form -->
+      <form
+        style="display: block; position: relative; margin: 1rem 0;"
+        id="upload-file"
+        method="post"
+        enctype="multipart/form-data"
+      >
+        <div class="block-input-modal" style=""></div>
+        <!-- Block input form -->
+        <div
+          class="d-flex"
+          style="justify-content: center; justify-items: center;"
+        >
+          <button type="button">
+            <label class="button" style="" for="inputfile" id="inputlabel1">
+              Browse file
+            </label>
+          </button>
+          <input
+            id="inputfile"
+            type="file"
+            style="display: none;"
+            name="file"
+            class="form-control-file"
+            accept="image/*"
+          />
+          <input
+            type="url"
+            id="inputurl"
+            class="form-control"
+            style="padding: 0; height: auto;"
+            name="img-url"
+            placeholder="or paste image here"
+          />
+        </div>
+      </form>
+      <!-- /Input form -->
+
       <!-- Image preview and predicted image -->
-      <div class="" style="height: 100%; width: 100%; margin-right: 0;">
+      <div class="" style="position: relative; height: 600px; width: auto;">
         <div class="image-in-preview">
           <!-- IMAGE -->
           <img
